@@ -22,6 +22,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 
+from PIL import Image
 
 
 
@@ -46,8 +47,12 @@ class ImageDatasetNPZ(Dataset):
     def __getitem__(self, idx):
         image = self.images[idx]
         label = self.labels[idx]
+
+        # Convert numpy array to PIL Image
+        image = Image.fromarray(image.astype('uint8'))
+
         if self.transform:
-            image = self.transform(image)
+            image = self.transform(image)  # For SimCLRTransform, returns (x1, x2)
         return image, label
     
     
@@ -64,8 +69,9 @@ def extract_features_and_labels(model, dataloader, normalize=False):
     device = next(model.parameters()).device
 
     for batch in tqdm(dataloader, disable=True):
-        x, y = batch
-        x = x.to(device)
+        x1, x2, y = batch  # unpack 3 elements
+        x = x1.to(device)  # choose one view
+        y = y.to(device)
         with torch.no_grad():
             feats = model.get_features(x)
         features.append(feats.cpu())
@@ -90,6 +96,12 @@ def run_knn_probe(train_features, train_labels, test_features, test_labels):
     test_labels: (num_test_samples,)
     returns: accuracy (float)
     """
+    # Move tensors to CPU
+    train_features = train_features.cpu().numpy()
+    train_labels   = train_labels.cpu().numpy()
+    test_features  = test_features.cpu().numpy()
+    test_labels    = test_labels.cpu().numpy()
+    
     knn = KNeighborsClassifier(n_neighbors=5, n_jobs=-1)
     knn.fit(train_features, train_labels)
     test_preds = knn.predict(test_features)

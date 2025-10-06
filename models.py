@@ -1,4 +1,5 @@
 import torch.nn as nn
+from torchvision.models import resnet18
 
 class ImageEncoder(nn.Module):
     """
@@ -29,21 +30,22 @@ class ImageEncoder(nn.Module):
     def __init__(self):
         super().__init__()
 
+        enc = resnet18(weights=None)          # initialize from scratch
+        enc.conv1 = nn.Conv2d(
+            self.input_channels, self.input_dim, kernel_size=3, stride=1, padding=1, bias=False
+        )                                     # adapt to small 64x64 input
+        enc.maxpool = nn.Identity()           # remove initial downsampling
+        enc.fc = nn.Identity()                # remove classification head
+        self.encoder = enc                    # encoder outputs 512-dim features
 
-        ######################## TODO: YOUR CODE HERE ########################
-        # Define the layers of the encoder and projector here
 
-        # Encoder: flattens the image and learns a compact feature representation
-        self.encoder = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(self.input_channels * self.input_dim * self.input_dim, self.feature_dim),
-            nn.ReLU(),
+        self.projector = nn.Sequential(
+            nn.Linear(512, self.feature_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(self.feature_dim, self.proj_dim)
         )
-
-        # Projector: maps encoder features into the final embedding space
-        self.projector = nn.Linear(self.feature_dim, self.proj_dim)
         
-        ######################################################################
+    
 
     def forward(self, x):
         """
@@ -58,7 +60,9 @@ class ImageEncoder(nn.Module):
         """
         features = self.encoder(x)   # (batch_size, ...)
         projected_features = self.projector(features)  # (batch_size, proj_dim)
-        return features, projected_features
+        #return features, projected_features
+        return nn.functional.normalize(projected_features, dim=1)  # return ONLY projections
+
     
     def get_features(self, x):
         """
