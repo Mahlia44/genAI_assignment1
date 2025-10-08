@@ -1,5 +1,7 @@
 cs461_assignment1_data/
 checkpoints/
+checkpoints_model2/
+checkpoints_model3/
 __pycache__/
 
 # Byte-compiled / optimized / DLL files

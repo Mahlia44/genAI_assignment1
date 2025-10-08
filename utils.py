@@ -69,9 +69,8 @@ def extract_features_and_labels(model, dataloader, normalize=False):
     device = next(model.parameters()).device
 
     for batch in tqdm(dataloader, disable=True):
-        x1, x2, y = batch  # unpack 3 elements
+        x1, y = batch  # unpack 3 elements
         x = x1.to(device)  # choose one view
-        y = y.to(device)
         with torch.no_grad():
             feats = model.get_features(x)
         features.append(feats.cpu())
@@ -96,11 +95,6 @@ def run_knn_probe(train_features, train_labels, test_features, test_labels):
     test_labels: (num_test_samples,)
     returns: accuracy (float)
     """
-    # Move tensors to CPU
-    train_features = train_features.cpu().numpy()
-    train_labels   = train_labels.cpu().numpy()
-    test_features  = test_features.cpu().numpy()
-    test_labels    = test_labels.cpu().numpy()
     
     knn = KNeighborsClassifier(n_neighbors=5, n_jobs=-1)
     knn.fit(train_features, train_labels)
